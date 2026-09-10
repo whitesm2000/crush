@@ -20,6 +20,7 @@ the daily-driver `crush.exe` from.
 
 | Branch | Description | Upstream PR |
 |---|---|---|
+| `feat/agent-local-tweaks` | Other-session work: Ctrl+B pushes foreground bash to background job, `llm-max-retries` option, Windows console title + notify handling. Source: `Documents/VS Code/crush-build/crush` (kept in sync via the `crush-build` remote; a ui.go-only WIP remains in that repo's stash) | private |
 | `feat/mcp-ref-inlining` | Inline local `$ref`/`$defs` definitions when forwarding MCP tool schemas; fixes Moonshot 400 "not a valid moonshot flavored json schema" on tools like TickTick that use `$ref: #/$defs/...` | [charmbracelet/crush#3782](https://github.com/charmbracelet/crush/pull/3782) |
 
 ## Retired features

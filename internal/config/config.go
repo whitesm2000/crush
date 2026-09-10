@@ -380,6 +380,22 @@ type Options struct {
 	Notifications             string       `json:"notifications,omitempty" jsonschema:"description=Notification style to use. Options: auto (default)\\, native\\, osc\\, bell\\, disabled. Auto selects based on environment: native for local sessions\\, osc for SSH (with automatic OSC 99/777 detection).,enum=auto,enum=native,enum=osc,enum=bell,enum=disabled,default=auto"`
 	DisabledSkills            []string     `json:"disabled_skills,omitempty" jsonschema:"description=List of skill names to disable and hide from the agent,example=crush-config"`
 	RequestTimeout            *int         `json:"request_timeout,omitempty" jsonschema:"description=Timeout in seconds for each LLM API request. Streaming responses are aborted only after this much inactivity\\, so slow but active streams are never killed. 0 disables it\\, negative values are invalid.,default=60,example=120,example=300,example=0"`
+	LLMMaxRetries             *int         `json:"llm_max_retries,omitempty" jsonschema:"description=Maximum number of retries per LLM API request after retryable failures (network errors\\, rate limits). Each retry is visible in the status line. 0 disables retries.,default=3,example=1,example=0"`
+}
+
+// DefaultLLMMaxRetries bounds how many times a failed LLM request is retried
+// when the user has not configured a limit. Matches fantasy's default.
+const DefaultLLMMaxRetries = 3
+
+// GetLLMMaxRetries returns the maximum number of retries for LLM API
+// requests. The nil receiver and the unset field both mean
+// DefaultLLMMaxRetries; negative values are invalid and also fall back to
+// the default.
+func (o *Options) GetLLMMaxRetries() int {
+	if o == nil || o.LLMMaxRetries == nil || *o.LLMMaxRetries < 0 {
+		return DefaultLLMMaxRetries
+	}
+	return *o.LLMMaxRetries
 }
 
 // DefaultRequestTimeout bounds each LLM API request when the user has not

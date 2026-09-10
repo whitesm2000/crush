@@ -15,6 +15,10 @@ const (
 	// TypeAgentError indicates the agent's turn terminated with an
 	// error. The error text is carried in Notification.Message.
 	TypeAgentError Type = "error"
+	// TypeAgentRetry indicates a failed LLM request is about to be
+	// retried. Message carries a human-readable status line describing
+	// the failure and the retry delay.
+	TypeAgentRetry Type = "agent_retry"
 	// TypeAWSSSOAuth indicates AWS SSO credentials have expired and the
 	// coordinator is running the configured refresh command. It opens the
 	// AWS SSO dialog; a follow-up with the same type carries the SSO URL

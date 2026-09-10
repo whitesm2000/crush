@@ -213,6 +213,9 @@ var optionSpecs = map[string]optionSpec{
 	// Integer fields, in seconds.
 	"request-timeout": {jsonKey: "request_timeout", kind: optInt},
 
+	// Integer fields, plain counts.
+	"llm-max-retries": {jsonKey: "llm_max_retries", kind: optInt},
+
 	// List fields. Keys are singular because each call appends one value.
 	"context-path":        {jsonKey: "context_paths", kind: optList},
 	"global-context-path": {jsonKey: "global_context_paths", kind: optList},

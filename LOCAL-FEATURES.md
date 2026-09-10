@@ -20,7 +20,7 @@ the daily-driver `crush.exe` from.
 
 | Branch | Description | Upstream PR |
 |---|---|---|
-| `feat/mcp-ref-inlining` | Inline local `$ref`/`$defs` definitions when forwarding MCP tool schemas; fixes Moonshot 400 "not a valid moonshot flavored json schema" on tools like TickTick that use `$ref: #/$defs/...` | not yet |
+| `feat/mcp-ref-inlining` | Inline local `$ref`/`$defs` definitions when forwarding MCP tool schemas; fixes Moonshot 400 "not a valid moonshot flavored json schema" on tools like TickTick that use `$ref: #/$defs/...` | [charmbracelet/crush#3782](https://github.com/charmbracelet/crush/pull/3782) |
 
 ## Retired features
 

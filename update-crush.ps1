@@ -1,7 +1,7 @@
 # update-crush.ps1 - Pull upstream Crush, rebase local features, rebuild.
 # Run from anywhere:  powershell -File "$HOME\crush-src\update-crush.ps1"
 param(
-    [string]$DeployTo = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\charmbracelet.crush_Microsoft.Winget.Source_8wekyb3d8bbwe\crush_0.89.0_Windows_x86_64\crush.exe"  # path of crush.exe to replace with the fresh build; pass "" to skip deploy
+    [string]$DeployTo = "$env:USERPROFILE\.crush\bin\crush.exe"  # path of crush.exe to replace with the fresh build; pass "" to skip deploy
 )
 
 $ErrorActionPreference = "Stop"

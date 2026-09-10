@@ -41,6 +41,7 @@ type KeyMap struct {
 		NewSession     key.Binding
 		AddAttachment  key.Binding
 		Cancel         key.Binding
+		PushBackground key.Binding
 		Tab            key.Binding
 		Details        key.Binding
 		TogglePills    key.Binding
@@ -199,6 +200,10 @@ func DefaultKeyMap() KeyMap {
 	km.Chat.Cancel = key.NewBinding(
 		key.WithKeys("esc", "alt+esc"),
 		key.WithHelp("esc", "cancel"),
+	)
+	km.Chat.PushBackground = key.NewBinding(
+		key.WithKeys("ctrl+b"),
+		key.WithHelp("ctrl+b", "background command"),
 	)
 	km.Chat.Tab = key.NewBinding(
 		key.WithKeys("tab"),

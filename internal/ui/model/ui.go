@@ -716,9 +716,13 @@ func (m *UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.caps.Update(msg)
 	switch msg := msg.(type) {
 	case tea.EnvMsg:
-		// Is this Windows Terminal?
+		// Is this Windows Terminal or Ghostty (possibly via SSH)?
 		if !m.sendProgressBar {
-			m.sendProgressBar = slices.Contains(msg, "WT_SESSION")
+			m.sendProgressBar = slices.ContainsFunc(msg, func(e string) bool {
+				return e == "WT_SESSION" ||
+					e == "TERM_PROGRAM=ghostty" ||
+					e == "TERM_PROGRAM=Ghostty"
+			})
 		}
 		cmds = append(cmds, common.QueryCmd(uv.Environ(msg)))
 	case tea.ModeReportMsg:
@@ -2574,6 +2578,27 @@ func (m *UI) handleKeyPressMsg(msg tea.KeyPressMsg) tea.Cmd {
 		}
 	}
 
+	// Push the session's running foreground bash command to the background
+	// so the agent keeps working (and can be steered) while it finishes.
+	if key.Matches(msg, m.keyMap.Chat.PushBackground) {
+		if m.isAgentBusy() && m.hasSession() {
+			if agenttools.PushSessionBashBackground(m.session.ID) {
+				m.status.SetInfoMsg(util.InfoMsg{
+					Type: util.InfoTypeSuccess,
+					Msg:  "Moved running command to background",
+					TTL:  DefaultStatusTTL,
+				})
+				return clearInfoMsgCmd(DefaultStatusTTL)
+			}
+			m.status.SetInfoMsg(util.InfoMsg{
+				Type: util.InfoTypeWarn,
+				Msg:  "No foreground command running",
+				TTL:  DefaultStatusTTL,
+			})
+			return clearInfoMsgCmd(DefaultStatusTTL)
+		}
+	}
+
 	switch m.state {
 	case uiOnboarding:
 		return tea.Batch(cmds...)
@@ -3173,7 +3198,24 @@ func (m *UI) View() tea.View {
 	}
 	v.MouseMode = mouseMode(m.mouseEnabled, m.activeInline != nil)
 	v.ReportFocus = m.caps.ReportFocusEvents
-	v.WindowTitle = "crush " + home.Short(m.com.Workspace.WorkingDir())
+	// Window title: the active session's title (falling back to the
+	// working directory) prefixed with an animated busy spinner, so
+	// terminal tabs show which conversation each one is on and whether
+	// it still works. Frames advance with wall-clock time, so every UI
+	// repaint (token streams, tool output) animates the spinner.
+	windowTitle := ""
+	if m.hasSession() {
+		windowTitle = strings.TrimSpace(m.session.Title)
+	}
+	if windowTitle == "" || windowTitle == "Untitled Session" {
+		windowTitle = "Crush - " + home.Short(m.com.Workspace.WorkingDir())
+	}
+	if m.isAgentBusy() {
+		spinnerFrames := []string{"◐", "◓", "◑", "◒"}
+		frame := spinnerFrames[int(time.Now().UnixMilli()/150)%len(spinnerFrames)]
+		windowTitle = frame + " " + windowTitle
+	}
+	v.WindowTitle = windowTitle
 
 	canvas := uv.NewScreenBuffer(m.width, m.height)
 	v.Cursor = m.Draw(canvas, canvas.Bounds())
@@ -3225,7 +3267,7 @@ func (m *UI) ShortHelp() []key.Binding {
 			} else if m.promptQueue > 0 {
 				cancelBinding.SetHelp("esc", "clear queue")
 			}
-			binds = append(binds, cancelBinding)
+			binds = append(binds, cancelBinding, k.Chat.PushBackground)
 		}
 
 		switch m.focus {
@@ -4747,6 +4789,15 @@ func (m *UI) handleAgentNotification(n notify.Notification) tea.Cmd {
 	case notify.TypeAgentError:
 		// Terminal edge like TypeAgentFinished; fall through to the
 		// busy/queue refresh below.
+	case notify.TypeAgentRetry:
+		// Non-terminal: a failed LLM request is being retried. Surface
+		// it on the status line so a stalled provider is visible.
+		m.status.SetInfoMsg(util.InfoMsg{
+			Type: util.InfoTypeWarn,
+			Msg:  n.Message,
+			TTL:  15 * time.Second,
+		})
+		return clearInfoMsgCmd(15 * time.Second)
 	case notify.TypeReAuthenticate:
 		return m.handleReAuthenticate(n.ProviderID)
 	case notify.TypeAWSSSOAuth:

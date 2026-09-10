@@ -177,6 +177,7 @@ type sessionAgent struct {
 	sessions             session.Service
 	messages             message.Service
 	disableAutoSummarize bool
+	maxRetries           int
 	isYolo               bool
 	notify               pubsub.Publisher[notify.Notification]
 	runComplete          pubsub.Publisher[notify.RunComplete]
@@ -229,6 +230,7 @@ type SessionAgentOptions struct {
 	SystemPrompt         string
 	IsSubAgent           bool
 	DisableAutoSummarize bool
+	MaxRetries           int
 	IsYolo               bool
 	Sessions             session.Service
 	Messages             message.Service
@@ -249,6 +251,7 @@ func NewSessionAgent(
 		sessions:             opts.Sessions,
 		messages:             opts.Messages,
 		disableAutoSummarize: opts.DisableAutoSummarize,
+		maxRetries:           opts.MaxRetries,
 		tools:                csync.NewSliceFrom(opts.Tools),
 		isYolo:               opts.IsYolo,
 		notify:               opts.Notify,
@@ -793,6 +796,11 @@ func (a *sessionAgent) Run(ctx context.Context, call SessionAgentCall) (result *
 	if call.MaxOutputTokens > 0 {
 		maxOutputTokens = &call.MaxOutputTokens
 	}
+	// Bound and surface LLM request retries: maxRetries caps silent
+	// retry loops, and OnRetry publishes a status notification so a
+	// stalled provider is visible in the TUI instead of looking like a
+	// hung session.
+	maxRetries := a.maxRetries
 	result, err = agent.Stream(genCtx, fantasy.AgentStreamCall{
 		Prompt:           message.PromptWithTextAttachments(call.Prompt, call.Attachments),
 		Files:            files,
@@ -805,6 +813,7 @@ func (a *sessionAgent) Run(ctx context.Context, call SessionAgentCall) (result *
 		PresencePenalty:  call.PresencePenalty,
 		TopK:             call.TopK,
 		FrequencyPenalty: call.FrequencyPenalty,
+		MaxRetries:       &maxRetries,
 		PrepareStep: func(callContext context.Context, options fantasy.PrepareStepFunctionOptions) (_ context.Context, prepared fantasy.PrepareStepResult, err error) {
 			prepared.Messages = options.Messages
 			for i := range prepared.Messages {
@@ -930,6 +939,21 @@ func (a *sessionAgent) Run(ctx context.Context, call SessionAgentCall) (result *
 		},
 		OnRetry: func(err *fantasy.ProviderError, delay time.Duration) {
 			slog.Warn("Provider request failed, retrying", providerRetryLogFields(err, delay)...)
+			// Surface the retry on the status line so a stalled provider
+			// is visible instead of looking like a hung session.
+			statusMsg := fmt.Sprintf("LLM request failed, retrying in %s...", delay.Round(time.Second))
+			if err != nil {
+				detail := strings.TrimSpace(err.Error())
+				if len(detail) > 120 {
+					detail = detail[:120] + "..."
+				}
+				statusMsg = fmt.Sprintf("LLM request failed (%s), retrying in %s...", detail, delay.Round(time.Second))
+			}
+			a.notify.Publish(pubsub.CreatedEvent, notify.Notification{
+				SessionID: call.SessionID,
+				Type:      notify.TypeAgentRetry,
+				Message:   statusMsg,
+			})
 			// Reset streamed content so the retried response doesn't
 			// concatenate with partial content from the failed attempt.
 			// On the final attempt (no more retries), any partial content

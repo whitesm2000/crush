@@ -311,7 +311,13 @@ func NewBashTool(permissions permission.Service, workingDir string, attribution 
 				return fantasy.ToolResponse{}, fmt.Errorf("error starting shell: %w", err)
 			}
 
-			// Wait for either completion, auto-background threshold, or context cancellation
+			// Track this command so the TUI can push it to the background on
+			// demand (ctrl+b) instead of waiting for the auto-background timer.
+			pushHandle := registerForegroundBash(sessionID)
+			defer unregisterForegroundBash(sessionID, pushHandle)
+
+			// Wait for completion, auto-background threshold, a manual push, or
+			// context cancellation
 			ticker := time.NewTicker(100 * time.Millisecond)
 			defer ticker.Stop()
 
@@ -332,6 +338,10 @@ func NewBashTool(permissions permission.Service, workingDir string, attribution 
 						break waitLoop
 					}
 				case <-timeout:
+					stdout, stderr, done, execErr = bgShell.GetOutput()
+					break waitLoop
+				case <-pushHandle.push:
+					// User pushed this command to the background (ctrl+b).
 					stdout, stderr, done, execErr = bgShell.GetOutput()
 					break waitLoop
 				case <-ctx.Done():

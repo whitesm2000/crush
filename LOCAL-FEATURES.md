@@ -24,6 +24,13 @@ the daily-driver `crush.exe` from.
 | `feat/tool-result-adjacency` | Re-emit tool results immediately after their tool calls (fixes permanently-locked sessions on strict providers like Kimi/DeepSeek when messages interleave). Recovered from fork branch `fix/kimi-400` (authored Sep 8) | none; consider upstream PR | | Other-session work: Ctrl+B pushes foreground bash to background job, `llm-max-retries` option, Windows console title + notify handling. Source: `Documents/VS Code/crush-build/crush` (kept in sync via the `crush-build` remote; a ui.go-only WIP remains in that repo's stash) | private |
 | `feat/mcp-ref-inlining` | Inline local `$ref`/`$defs` definitions when forwarding MCP tool schemas; fixes Moonshot 400 "not a valid moonshot flavored json schema" on tools like TickTick that use `$ref: #/$defs/...` | [charmbracelet/crush#3782](https://github.com/charmbracelet/crush/pull/3782) |
 
+## Pending WIP (not merged)
+
+- Window-title/busy-marker session title: stashed in the
+  `crush-build` clone (stash@{0}) and exported to
+  `Documents/VS Code/crush-build/crush/window-title-wip.patch`.
+  Untested; confirm with the other session before merging.
+
 ## Retired features
 
 (empty - when upstream merges a PR for one of ours, delete the branch

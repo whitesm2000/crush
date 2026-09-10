@@ -10,7 +10,7 @@ $Go = "C:\Program Files\Go\bin\go.exe"
 
 Write-Host "== Fetching upstream ==" -ForegroundColor Cyan
 git checkout main
-git pull origin main
+git pull upstream main
 
 Write-Host "`n== Local commits upstream does NOT have (your keep-list) ==" -ForegroundColor Cyan
 $keep = git log --cherry-pick --right-only --oneline "main...mine"
